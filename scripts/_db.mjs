@@ -8,8 +8,10 @@ export async function connect() {
     const db = new PGlite(process.env.LOCAL_DB_DIR ?? ".localdb");
     return { label: "local PGlite", query: async (t, p = []) => (await db.query(t, p)).rows, exec: (t) => db.exec(t), close: () => db.close() };
   }
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set (run `neon deploy` / `neon env pull`, or use LOCAL_DB=1)");
-  const sql = neon(process.env.DATABASE_URL);
+  // schema changes go over the direct (unpooled) connection; app traffic uses the pooled DATABASE_URL
+  const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set (run `neon deploy` / `neon env pull`, or use LOCAL_DB=1)");
+  const sql = neon(url);
   return {
     label: "Neon",
     close: async () => {},

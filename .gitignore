@@ -16,3 +16,7 @@ shots/
 *.out
 2026-*-local-command-*.txt
 __pycache__/
+
+.vercel
+.env*
+!.env.example
