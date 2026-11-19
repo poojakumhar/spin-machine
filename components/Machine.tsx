@@ -11,7 +11,7 @@ type Phase = "loading" | "idle" | "spinning" | "result" | "error";
 type SpinRes = { spinId: number; result: Cell[]; decoys: Cell[][] };
 
 const W = 1920, H = 1080;
-const STOP_MS = [3800, 4400, 5000];  // a 5-second spin; reels stop left to right (spin sound is still the 1 s clip, a longer one is coming)
+const STOP_MS = [3800, 4400, 5000];  // a 5-second spin; reels stop left to right (spin sound loops until then)
 const RESULT_MS = 9000;      // result stays this long, then back to idle
 const LOCK_MS = 2500;        // presses ignored this long after the result lands
 const COOLDOWN_MS = 700;     // min gap between accepted presses
@@ -119,7 +119,7 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
     resultAt.current = Date.now();
     setP("result");
     setConfetti(res.spinId);
-    if (soundRef.current) sfx.win();
+    if (soundRef.current) { sfx.end(); sfx.win(); }   // spin loop stops when the result shows
     resetTimer.current = setTimeout(() => { setConfetti(0); setP("idle"); lastInput.current = Date.now(); }, RESULT_MS);
   }, [reduced]);
 

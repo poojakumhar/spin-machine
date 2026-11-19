@@ -1,5 +1,5 @@
 // Sounds. Off by default; the audio context is created lazily after a user gesture.
-// Spin: public/audio/spin.mp3 (1 s), played once per spin at 75% speed. Stops and result: tiny synthesized tones.
+// Spin: public/audio/spin.mp3 (1.27 s) loops from the pull until the result shows. Result: a tiny synthesized chime.
 let ctx: AudioContext | null = null;
 
 function ac() {
@@ -27,8 +27,9 @@ function tone(freq: number, dur: number, type: OscillatorType, gain: number, del
 // ---- spin loop
 const SPIN_URL = "/audio/spin.mp3";
 const SPIN_GAIN = 0.8;
-const SPIN_RATE = 0.75;   // played a little slower (and slightly deeper): 1 s clip -> 1.33 s, matching STOP_MS in Machine.tsx
+const SPIN_RATE = 1;      // normal speed
 let spinBuf: Promise<AudioBuffer | null> | null = null;
+let loopEnd = 0;          // end of the audible part: the clip's quiet tail is skipped so the loop has no gap
 let spinSrc: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
 
 function loadSpin() {
@@ -36,9 +37,19 @@ function loadSpin() {
     spinBuf = fetch(SPIN_URL)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
       .then((b) => ac().decodeAudioData(b))
+      .then((buf) => { loopEnd = audibleEnd(buf); return buf; })
       .catch(() => { spinBuf = null; return null; });   // try again next time
   }
   return spinBuf;
+}
+
+function audibleEnd(buf: AudioBuffer) {
+  const d = buf.getChannelData(0);
+  let peak = 0;
+  for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+  let z = d.length - 1;
+  while (z > 0 && Math.abs(d[z]) < peak * 0.05) z--;
+  return (z + 1) / buf.sampleRate;
 }
 
 function spinStop() {
@@ -59,7 +70,9 @@ async function spinStart() {
   const src = c.createBufferSource(), gain = c.createGain();
   src.buffer = buf;
   src.playbackRate.value = SPIN_RATE;
-  src.loop = false;                                      // plays once: the spin lasts as long as the clip (1 s)
+  src.loop = true;                                       // repeats until the result shows (sfx.end)
+  src.loopStart = 0;
+  src.loopEnd = loopEnd || buf.duration;
   gain.gain.setValueAtTime(0, c.currentTime);
   gain.gain.linearRampToValueAtTime(SPIN_GAIN, c.currentTime + 0.03);   // soft start, no click
   src.connect(gain).connect(c.destination);
