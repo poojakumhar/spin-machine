@@ -11,7 +11,7 @@ type Phase = "loading" | "idle" | "spinning" | "result" | "error";
 type SpinRes = { spinId: number; result: Cell[]; decoys: Cell[][] };
 
 const W = 1920, H = 1080;
-const STOP_MS = [800, 1070, 1330];  // a 1.33-second spin: the spin sound (1 s) played at 75% speed, see SPIN_RATE in sound.ts
+const STOP_MS = [3800, 4400, 5000];  // a 5-second spin; reels stop left to right (spin sound is still the 1 s clip, a longer one is coming)
 const RESULT_MS = 9000;      // result stays this long, then back to idle
 const LOCK_MS = 2500;        // presses ignored this long after the result lands
 const COOLDOWN_MS = 700;     // min gap between accepted presses

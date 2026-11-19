@@ -134,16 +134,18 @@ export const Reel = forwardRef<ReelHandle, { reel: 1 | 2 | 3; initial: Cell | nu
       cancelAnimationFrame(raf.current);
       spinToken.current++;
       const before = around(from), after = around(target);
-      // A real drum shows its items in a fixed order: turn through the reel's own list, at least 12 steps, ending on the result.
+      // A real drum shows its items in a fixed order: turn through the reel's own list, ending on the result.
+      // Longer spins pass more items (about 9 per second, at least 12), so a 5 s spin still starts fast.
+      const minSteps = Math.max(12, Math.round(ms / 110));
       const p = poolRef.current;
       const fi = p.findIndex((x) => x.id === from.id), ti = p.findIndex((x) => x.id === target.id);
       let list: Cell[];
       if (p.length >= 2 && fi >= 0 && ti >= 0) {
         let steps = (ti - fi + p.length) % p.length;
-        while (steps < 12) steps += p.length;
+        while (steps < minSteps) steps += p.length;
         list = [before[0], ...Array.from({ length: steps + 1 }, (_, k) => p[(fi + k) % p.length]), after[2]];
       } else {
-        const filler = decoys.length ? Array.from({ length: 12 }, (_, i) => decoys[i % decoys.length]) : [];
+        const filler = decoys.length ? Array.from({ length: minSteps }, (_, i) => decoys[i % decoys.length]) : [];
         list = [before[0], from, ...filler, target, after[2]];
       }
       shown.current = target;
