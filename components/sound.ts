@@ -1,5 +1,5 @@
 // Sounds. Off by default; the audio context is created lazily after a user gesture.
-// Spin: public/audio/spin.mp3 (1.27 s) loops from the pull until the result shows. Result: a tiny synthesized chime.
+// Spin: public/audio/spin.mp3 (1 s, played at 75% speed) loops from the pull until the result shows. Result: a tiny synthesized chime.
 let ctx: AudioContext | null = null;
 
 function ac() {
@@ -27,7 +27,7 @@ function tone(freq: number, dur: number, type: OscillatorType, gain: number, del
 // ---- spin loop
 const SPIN_URL = "/audio/spin.mp3";
 const SPIN_GAIN = 0.8;
-const SPIN_RATE = 1;      // normal speed
+const SPIN_RATE = 0.75;   // a little slower and deeper, as approved for this clip
 let spinBuf: Promise<AudioBuffer | null> | null = null;
 let loopEnd = 0;          // end of the audible part: the clip's quiet tail is skipped so the loop has no gap
 let spinSrc: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
