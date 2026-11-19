@@ -33,3 +33,10 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+-- Images uploaded in the admin. Kept in the database because the hosting (Vercel) cannot write files at runtime.
+CREATE TABLE IF NOT EXISTS images (
+  name TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  data BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

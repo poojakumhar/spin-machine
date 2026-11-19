@@ -24,7 +24,7 @@ export async function api<T = unknown>(url: string, method = "GET", body?: unkno
   return j as T;
 }
 
-export const MAX_IMAGE_BYTES = 5_000_000;
+export const MAX_IMAGE_BYTES = 4_000_000;
 const TYPES = ["image/png", "image/webp", "image/svg+xml"];
 
 export const formatBytes = (n: number) => (n < 1024 ? `${n} B` : n < 1_048_576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1_048_576).toFixed(1)} MB`);
@@ -32,7 +32,7 @@ export const formatBytes = (n: number) => (n < 1024 ? `${n} B` : n < 1_048_576 ?
 /** Returns a message for the first problem, or null. */
 export function imageProblem(f: File): string | null {
   if (!TYPES.includes(f.type)) return `${f.name} is not a PNG, WebP or SVG image.`;
-  if (f.size > MAX_IMAGE_BYTES) return `${f.name} is ${formatBytes(f.size)}. The limit is 5 MB.`;
+  if (f.size > MAX_IMAGE_BYTES) return `${f.name} is ${formatBytes(f.size)}. The limit is 4 MB.`;
   return null;
 }
 

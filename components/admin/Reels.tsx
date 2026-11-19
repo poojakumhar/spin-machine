@@ -76,14 +76,19 @@ export default function Reels({ items, setItems, loading, reload }: Props) {
     }
   }
 
-  async function replaceImage(it: Item, f: File) {
-    const problem = imageProblem(f);
-    if (problem) return toast(problem, "err");
+  /** Saves a name and/or new image together (the Save button on a row). Returns true when it worked. */
+  async function save(it: Item, { label, file }: { label?: string; file?: File | null }) {
     try {
-      const url = await uploadImage(f);
-      await patch(it, { image_url: url }, `Image updated for “${it.label}”.`);
+      const body: Partial<Item> = {};
+      if (label !== undefined) body.label = label;
+      if (file) body.image_url = await uploadImage(file);
+      const { item } = await api<{ item: Item }>(`/api/admin/items/${it.id}`, "PATCH", body);
+      setItems((p) => p.map((x) => (x.id === item.id ? item : x)));
+      toast(`Saved “${item.label}”.`);
+      return true;
     } catch (e) {
       toast(errText(e), "err");
+      return false;
     }
   }
 
@@ -138,9 +143,7 @@ export default function Reels({ items, setItems, loading, reload }: Props) {
                   onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); void move(idx, idx - 1); } if (e.key === "ArrowDown") { e.preventDefault(); void move(idx, idx + 1); } }}>
                   <IconGrip />
                 </button>
-                <ImageCell it={it} onPick={(f) => void replaceImage(it, f)} />
-                <ReelPreview reel={it.reel} label={it.label} image={it.image_url} dim={!it.active} />
-                <LabelField it={it} onSave={(v) => patch(it, { label: v })} />
+                <ItemEditor it={it} onSave={(body) => save(it, body)} />
                 <Switch checked={it.active} label={`${it.label} is ${it.active ? "on" : "off"}`} onChange={(v) => void patch(it, { active: v })} />
                 <button type="button" className="iconbtn danger" aria-label={`Delete ${it.label}`} onClick={() => void remove(it)}><IconTrash /></button>
               </li>
@@ -155,36 +158,64 @@ export default function Reels({ items, setItems, loading, reload }: Props) {
   );
 }
 
-function ImageCell({ it, onPick }: { it: Item; onPick: (f: File) => void }) {
+/** Name and image of one item. Changes stay here as a draft until Save; Cancel puts the saved ones back. */
+function ItemEditor({ it, onSave }: { it: Item; onSave: (b: { label?: string; file?: File | null }) => Promise<boolean> }) {
+  const toast = useToast();
   const ref = useRef<HTMLInputElement>(null);
-  return (
-    <>
-      <button type="button" className="thumb-btn" aria-label={`${it.image_url ? "Replace" : "Add"} image for ${it.label}`} onClick={() => ref.current?.click()}>
-        <Thumb src={it.image_url} />
-      </button>
-      <input ref={ref} type="file" hidden accept="image/png,image/webp,image/svg+xml" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
-    </>
-  );
-}
-
-function LabelField({ it, onSave }: { it: Item; onSave: (v: string) => Promise<void> }) {
   const [v, setV] = useState(it.label);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
   useEffect(() => setV(it.label), [it.label]);
-  const commit = async () => {
-    const t = v.trim();
-    if (t === it.label) return setErr("");
+  useEffect(() => {
+    if (!file) return setPreview(null);
+    const u = URL.createObjectURL(file);
+    setPreview(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  const t = v.trim();
+  const dirty = t !== it.label || !!file;
+  const image = preview ?? it.image_url;
+  const pick = (f: File | undefined) => {
+    if (!f) return;
+    const p = imageProblem(f);
+    if (p) return toast(p, "err");
+    setFile(f);
+  };
+  const cancel = () => { setV(it.label); setFile(null); setErr(""); };
+  const save = async () => {
     if (!t) { setErr("The label cannot be empty."); return; }
     setErr("");
-    await onSave(t);
+    setBusy(true);
+    const ok = await onSave({ label: t !== it.label ? t : undefined, file });
+    setBusy(false);
+    if (ok) setFile(null);
   };
   return (
-    <div className="lf">
-      <input className="inp" aria-label={`Label for ${it.label}`} aria-invalid={!!err} aria-describedby={err ? `e-${it.id}` : undefined} maxLength={60} value={v}
-        onChange={(e) => setV(e.target.value)} onBlur={() => void commit()}
-        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { setV(it.label); setErr(""); } }} />
-      {err && <span className="field-err" id={`e-${it.id}`} role="alert">{err}</span>}
-    </div>
+    <>
+      <button type="button" className={`thumb-btn${file ? " changed" : ""}`} aria-label={`${it.image_url ? "Change" : "Add"} image for ${it.label}`} onClick={() => ref.current?.click()} disabled={busy}>
+        <Thumb src={image} />
+      </button>
+      <input ref={ref} type="file" hidden accept="image/png,image/webp,image/svg+xml" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+      <ReelPreview reel={it.reel} label={t} image={image} dim={!it.active} />
+      <div className="lf">
+        <input className="inp" aria-label={`Label for ${it.label}`} aria-invalid={!!err} aria-describedby={err ? `e-${it.id}` : undefined} maxLength={60} value={v} disabled={busy}
+          onChange={(e) => { setV(e.target.value); if (err) setErr(""); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && dirty) void save(); if (e.key === "Escape") cancel(); }} />
+        {err && <span className="field-err" id={`e-${it.id}`} role="alert">{err}</span>}
+        <div className="lf-actions">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => ref.current?.click()} disabled={busy}><IconImage /> {it.image_url || file ? "Change image" : "Add image"}</button>
+          {dirty && (
+            <>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => void save()} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+              <button type="button" className="btn btn-quiet btn-sm" onClick={cancel} disabled={busy}>Cancel</button>
+              <span className="lf-note" role="status">Not saved yet</span>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -273,7 +304,7 @@ function AddDialog({ open, reel, onClose, onAdded }: { open: boolean; reel: Reel
               ) : (
                 <>
                   <IconImage />
-                  <span className="drop-text"><strong>Drop an image here</strong><small>PNG, WebP or SVG, up to 5 MB. Transparent backgrounds work best.</small></span>
+                  <span className="drop-text"><strong>Drop an image here</strong><small>PNG, WebP or SVG, up to 4 MB. Transparent backgrounds work best.</small></span>
                   <button type="button" className="btn btn-secondary" aria-describedby="add-img-l" onClick={() => input.current?.click()}>Choose image</button>
                 </>
               )}

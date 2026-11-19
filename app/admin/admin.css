@@ -152,6 +152,11 @@ dialog.cf.cf-wide { max-width: min(640px, calc(100vw - 32px)); }
 .rl-row .grip { grid-area: grip; } .rl-row .thumb-btn { grid-area: thumb; } .rl-row .pv { grid-area: pv; } .rl-row .lf { grid-area: label; }
 .rl-row .sw { grid-area: on; } .rl-row .iconbtn { grid-area: del; }
 .lf { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn-sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.btn-sm svg { width: 16px; height: 16px; }
+.lf-note { color: var(--muted); font-size: 13px; }
+.thumb-btn.changed { outline: 2px solid var(--gold); outline-offset: 2px; }
 .grip { display: grid; place-items: center; width: 44px; height: 48px; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: grab; touch-action: none; }
 .grip:hover { background: var(--surface-2); color: var(--brand); }
 @container (min-width: 780px) {
