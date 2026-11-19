@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1280, height: 800 } });
+await p.goto("http://localhost:3100/admin");
+await p.screenshot({ path: "shots/admin-login.png" });
+await p.fill("#uid", "admin@gmail.com"); await p.fill("#pw", "wrong"); await p.click("button[type=submit]"); await p.waitForTimeout(500);
+console.log("wrong pw message:", await p.locator(".msg").innerText());
+await p.fill("#pw", "admin@123"); await p.click("button[type=submit]"); await p.waitForSelector("text=Reel items", { timeout: 5000 });
+console.log("signed in, heading visible");
+await p.reload(); await p.waitForSelector("text=Reel items"); console.log("session survives reload");
+await p.screenshot({ path: "shots/admin-in.png" });
+await b.close();

@@ -1,0 +1,92 @@
+:root {
+  --cream: #f6e8c6;
+  --cream-deep: #e6cf9c;
+  --parch-1: #fde9c3;
+  --parch-2: #f0cf94;
+  --red: #7a0c17;
+  --gold-hi: #fff1a8;
+  --gold: #e8b02e;
+  --cylinder: linear-gradient(90deg, #5e3002 0%, #b0680a 6%, #f3b72c 15%, #fff7c6 23%, #ffdc5e 31%, #eaa519 45%, #b8720a 60%, #8a4d04 70%, #dc9718 83%, #ffe47e 92%, #6a3a03 100%);
+  --font-display: "Rozha One", Georgia, serif;
+  --font-body: "Cormorant Garamond", Georgia, serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--cream-deep); font-family: var(--font-body); }
+html:has(.viewport) { overflow: hidden; }
+body { color: #2a1a08; }
+
+/* ───────── Kiosk stage: fixed 1920×1080, scaled to fit ───────── */
+.viewport {
+  position: fixed; inset: 0; overflow: hidden;
+  background: radial-gradient(ellipse 70% 62% at 50% 44%, var(--parch-1) 0%, #f5dfae 55%, var(--cream-deep) 100%);
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+.stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; overflow: hidden; }
+.stage.nocursor, .stage.nocursor * { cursor: none !important; }
+.stage button { font: inherit; border: 0; padding: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* machine: back shading -> live content -> front frame (rings, dividers, ornaments) */
+.machine { position: absolute; left: 240px; top: 54px; width: 1440px; height: 810px; filter: drop-shadow(0 14px 16px rgba(90, 50, 0, .35)); }
+.frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+.frame-front { z-index: 5; filter: drop-shadow(6px 0 6px rgba(70, 35, 0, .38)) drop-shadow(-6px 0 6px rgba(70, 35, 0, .38)) drop-shadow(0 4px 4px rgba(70, 35, 0, .3)); }
+.hole { position: absolute; z-index: 2; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, transparent, #000 30px, #000 calc(100% - 30px), transparent); mask-image: linear-gradient(180deg, transparent, #000 30px, #000 calc(100% - 30px), transparent); }
+.cyl { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 50% 50%; will-change: transform, opacity; }
+.strip { position: absolute; left: 0; top: 0; width: 100%; will-change: transform, filter; }
+.hcell { position: relative; width: 100%; }
+.reduced .hcell { animation: fadein .7s ease both; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+/* lettering: one plain style, one case (uppercase), one size for every word */
+.word, .name { font-family: var(--font-word), system-ui, sans-serif; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: .04em; text-align: center; white-space: nowrap; }
+.wblock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 28px; }
+.word { font-size: 46px; line-height: 1.15; }
+.divider { width: 220px; height: auto; flex: none; filter: drop-shadow(0 1px 1px rgba(90, 50, 0, .35)); }
+.scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.acell { display: flex; flex-direction: column; box-sizing: border-box; padding-bottom: 29.4px; }   /* name centre = stage y 640, the same line as the side words */
+.aimg { flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: center; padding: 10px 18px 18px; }
+.animal { display: block; max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 10px 8px rgba(90, 50, 0, .3)); pointer-events: none; transform: translateY(-40px); }   /* lifted to sit mid-way between the top ornament and the name */
+.nameblock { flex: none; height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 28px; }
+.name { font-size: 46px; line-height: 1.15; }
+
+/* result glow */
+.machine.win { animation: machineglow 2.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes machineglow {
+  0%, 100% { filter: drop-shadow(0 14px 16px rgba(90, 50, 0, .35)) drop-shadow(0 0 18px rgba(255, 214, 90, .45)); }
+  50% { filter: drop-shadow(0 14px 16px rgba(90, 50, 0, .35)) drop-shadow(0 0 46px rgba(255, 214, 90, .95)); }
+}
+
+/* button: same gold gradient as the machine's rings (sampled from frame.png) */
+.pull {
+  position: absolute; left: 50%; top: 914px; width: 560px; height: 84px; margin-left: -280px; border-radius: 42px !important;
+  background: linear-gradient(180deg, #fff3b4 0%, #ffd23a 24%, #f8b81f 52%, #f0a014 78%, #f8c030 100%) !important;
+  box-shadow: 0 0 0 4px #8a4a06, 0 0 0 8px #ffd96a, 0 0 0 11px #a95002, 0 14px 0 11px #7a3d03, 0 26px 30px rgba(60, 25, 0, .4), inset 0 4px 6px rgba(255, 255, 255, .6), inset 0 -8px 14px rgba(150, 80, 0, .22);
+  transition: transform .12s, filter .2s;
+  animation: pulse 2.8s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+.pull span {
+  font-family: var(--font-display); font-size: 50px; letter-spacing: .06em; color: var(--red);
+  text-shadow: 0 2px 0 rgba(255, 244, 190, .9), 0 -1px 0 rgba(70, 10, 0, .5), 0 5px 6px rgba(90, 40, 0, .35);
+}
+.pull:active { transform: translateY(10px); box-shadow: 0 0 0 4px #8a4a06, 0 0 0 8px #ffd96a, 0 0 0 11px #a95002, 0 4px 0 11px #7a3d03, 0 10px 14px rgba(60, 25, 0, .4), inset 0 4px 6px rgba(255, 255, 255, .5), inset 0 -8px 14px rgba(110, 50, 0, .45); }
+.pull.busy { filter: saturate(.55) brightness(.92); animation: none; }
+@keyframes pulse { 50% { filter: brightness(1.12); transform: scale(1.015); } }
+
+
+.sound { position: absolute; left: 1752px; top: 950px; width: 72px; height: 72px; border-radius: 50% !important; opacity: .55; background: rgba(138, 15, 28, .12) !important; }
+.sound:hover { opacity: 1; }
+
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 6; }
+.confetti i { position: absolute; top: -40px; width: 14px; height: 24px; border-radius: 2px; opacity: 0; animation: fall linear forwards; }
+@keyframes fall { 0% { opacity: 0; translate: 0 0; } 8% { opacity: .95; } 100% { opacity: 0; translate: 40px 1180px; rotate: 540deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pull, .machine.win { animation: none; }
+}
+
+/* reel faces: wrapper holds the clipped face and the rim shadow that follows its arched outline */
+.face-wrap { position: absolute; z-index: 1; pointer-events: none; }
+.face-wrap .face { inset: 0; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 48px, #000 calc(100% - 48px), transparent 100%), linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%); -webkit-mask-composite: source-in; mask-image: linear-gradient(180deg, transparent 0, #000 48px, #000 calc(100% - 48px), transparent 100%), linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%); mask-composite: intersect; }   /* soft 10px side edge where the shading meets the ring's shadow */
+.face-rim { position: absolute; inset: 0; overflow: visible; }
+.ornament { position: absolute; z-index: 6; pointer-events: none; user-select: none; }
+
+.frame.drum { z-index: 1; }

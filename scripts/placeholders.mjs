@@ -1,0 +1,27 @@
+// Generates clearly-marked placeholder art into public/reels/ (transparent SVG).
+//  - animals (reel 2): dog.svg, bullock.svg, ...
+// Replace any file by dropping in one with the same name, or change the path / upload in /admin.
+import { writeFileSync, mkdirSync } from "node:fs";
+
+const animals = {
+  dog: "Dog", bullock: "Bullock", horse: "Horse", elephant: "Elephant",
+  camel: "Camel", goat: "Goat", parrot: "Parrot", deer: "Deer",
+};
+mkdirSync("public/reels", { recursive: true });
+const real = new Set(["dog", "bullock"]); // real artwork supplied as dog.png / bullock.png
+for (const [slug, name] of Object.entries(animals)) {
+  if (real.has(slug)) continue;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs><radialGradient id="g" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#e9c98a"/><stop offset="1" stop-color="#a9743a"/></radialGradient></defs>
+  <ellipse cx="300" cy="520" rx="190" ry="26" fill="#6b4a1f" opacity=".25"/>
+  <path d="M120 470 C100 300 170 190 300 190 C430 190 500 300 480 470 Z" fill="url(#g)" stroke="#7a4f1d" stroke-width="6"/>
+  <circle cx="300" cy="170" r="92" fill="url(#g)" stroke="#7a4f1d" stroke-width="6"/>
+  <text x="300" y="195" text-anchor="middle" font-family="Georgia,serif" font-size="96" font-weight="700" fill="#5a3512">${name[0]}</text>
+  <rect x="150" y="330" width="300" height="56" rx="10" fill="#8a0f1c"/>
+  <text x="300" y="368" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="700" letter-spacing="4" fill="#fff4d6">PLACEHOLDER</text>
+</svg>`;
+  writeFileSync(`public/reels/${slug}.svg`, svg);
+}
+
+
+console.log("placeholders written");

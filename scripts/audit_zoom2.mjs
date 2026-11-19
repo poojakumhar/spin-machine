@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+const items = [{ id: 1, reel: 1, label: "Tiryanch", image_url: null }, { id: 2, reel: 2, label: "Dog", image_url: "/reels/dog.png" }, { id: 3, reel: 3, label: "Parigrah", image_url: null }];
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 2 });
+await p.route("**/api/items", (r) => r.fulfill({ json: { items } }));
+await p.goto("http://localhost:3100"); await p.waitForSelector(".pull span:not(:has-text('…'))"); await p.waitForTimeout(800);
+const c = { tl: [240, 50, 200, 180], tr: [1480, 50, 200, 180], bl: [240, 740, 200, 140], br: [1480, 740, 200, 140], d1b: [650, 740, 200, 140], d2b: [1080, 740, 200, 140], d1t: [650, 50, 200, 140], d2t: [1080, 50, 200, 140] };
+for (const [k, [x, y, w, h]] of Object.entries(c)) await p.screenshot({ path: `shots/z2-${k}.png`, clip: { x, y, width: w, height: h } });
+const m = await p.evaluate(() => [...document.querySelectorAll(".word, .name")].map((e) => { const r = e.getBoundingClientRect(); return Math.round((r.left + r.right) / 2); }));
+console.log("label centres", m);
+await b.close();

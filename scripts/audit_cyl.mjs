@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
+const errs = []; p.on("pageerror", (e) => errs.push(String(e)));
+await p.goto("http://localhost:3100/"); await p.waitForSelector(".pull span:not(:has-text('…'))"); await p.waitForTimeout(900);
+await p.screenshot({ path: "shots/cyl-idle.png" });
+await p.keyboard.press("Space"); await p.waitForTimeout(700); await p.screenshot({ path: "shots/cyl-spin1.png" });
+await p.waitForTimeout(1300); await p.screenshot({ path: "shots/cyl-spin2.png" });
+await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+await p.addStyleTag({ content: ".confetti{display:none!important}" }); await p.waitForTimeout(400);
+await p.screenshot({ path: "shots/cyl-result.png" });
+console.log("errors:", errs.join(" ; ") || "none");
+await b.close();
