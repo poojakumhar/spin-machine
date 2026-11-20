@@ -27,6 +27,19 @@ export const PUT = (req: Request) =>
     if (clean.some((r) => [r.a, r.b, r.c].some((v) => v !== null && !Number.isInteger(v)))) {
       return Response.json({ error: "A reel has an invalid item." }, { status: 400 });
     }
+    // Every spin needs a name on all three reels. Old spins saved empty before this rule are let through
+    // unchanged (so moving, switching or deleting others still works); any new or edited empty spin is refused.
+    const key = (r: { a: number | null; b: number | null; c: number | null }) => `${r.a}|${r.b}|${r.c}`;
+    const old = await sql`SELECT reel1_item_id a, reel2_item_id b, reel3_item_id c FROM spin_script
+      WHERE reel1_item_id IS NULL OR reel2_item_id IS NULL OR reel3_item_id IS NULL`;
+    const left = new Map<string, number>();
+    for (const r of old) left.set(key(r as never), (left.get(key(r as never)) ?? 0) + 1);
+    for (const r of clean) {
+      if (r.a !== null && r.b !== null && r.c !== null) continue;
+      const k = key(r);
+      if (!left.get(k)) return Response.json({ error: "Every spin needs a name on all three reels." }, { status: 400 });
+      left.set(k, left.get(k)! - 1);
+    }
     await sql.transaction([
       sql`DELETE FROM spin_script`,
       ...clean.map((r, i) => sql`INSERT INTO spin_script (position,reel1_item_id,reel2_item_id,reel3_item_id,enabled,note)

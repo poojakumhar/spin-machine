@@ -30,7 +30,7 @@ export default function Settings({ nextSpin, totalSpins, scriptLength, loading, 
       confirmLabel: "Restart script",
       body: (
         <>
-          <p>The next spin will use row 1 of the script, and every row becomes playable again.</p>
+          <p>The next pull on the kiosk will show spin 1 of the script.</p>
           <ul><li><strong>Kept:</strong> the script rows, all {totalSpins} recorded spins and every reel item.</li></ul>
         </>
       ),
@@ -48,7 +48,7 @@ export default function Settings({ nextSpin, totalSpins, scriptLength, loading, 
           <p>This erases the spin history and the counts on the Stats page. It cannot be undone.</p>
           <ul>
             <li><strong>Deleted:</strong> {totalSpins} recorded spins.</li>
-            <li><strong>Kept:</strong> every reel item and its weight{SCRIPT_UI ? ", and the spin script" : ""}.</li>
+            <li><strong>Kept:</strong> every reel item{SCRIPT_UI ? ", and the spin script" : ""}.</li>
             {SCRIPT_UI && <li>The script restarts at spin 1.</li>}
           </ul>
         </>
@@ -62,8 +62,8 @@ export default function Settings({ nextSpin, totalSpins, scriptLength, loading, 
     <div className="set-wrap">
       {SCRIPT_UI && <section className="set-block">
         <div>
-          <h2>Restart the script</h2>
-          <p>The next spin is <strong>spin {nextSpin}</strong>{scriptLength ? ` of ${scriptLength} scripted` : ""}. Restart to run the script from the top, for example before a new session.</p>
+          <h2>Restart the sequence</h2>
+          <p>The next pull shows <strong>spin {nextSpin}</strong>{scriptLength ? ` of ${scriptLength}` : ""}. Restart to go back to spin 1, for example before a new session.</p>
         </div>
         <button type="button" className="btn btn-secondary" disabled={busy !== ""} onClick={() => void restart()}>{busy === "position" ? "Restarting…" : "Restart at spin 1"}</button>
       </section>}

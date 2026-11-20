@@ -1,17 +1,14 @@
 import { sql, assertDb, type Item } from "@/lib/db";
 import { guard } from "@/lib/api";
 import { nextSpinNumber } from "@/lib/spinState";
+import { reelPools } from "@/lib/pools";
 export const dynamic = "force-dynamic";
 
 const pub = (i: Item) => ({ id: i.id, label: i.label, image_url: i.image_url });
 
+/** Random pick for a reel left on Random. Every active item has the same chance (weights are not used). */
 function weighted(items: Item[]): Item {
-  const pool = items.filter((i) => i.weight > 0);
-  const list = pool.length ? pool : items; // all weights 0 -> uniform
-  const w = (i: Item) => (pool.length ? i.weight : 1);
-  let r = Math.random() * list.reduce((s, i) => s + w(i), 0);
-  for (const i of list) { r -= w(i); if (r < 0) return i; }
-  return list[list.length - 1];
+  return items[Math.floor(Math.random() * items.length)];
 }
 function decoys(items: Item[], chosen: Item, n = 8) {
   const others = items.filter((i) => i.id !== chosen.id);
@@ -23,12 +20,11 @@ function decoys(items: Item[], chosen: Item, n = 8) {
 export const POST = () =>
   guard(async () => {
     assertDb();
-    const all = (await sql`SELECT * FROM reel_items WHERE active ORDER BY sort_order, id`) as unknown as Item[];
-    const byReel = [1, 2, 3].map((r) => all.filter((i) => i.reel === r));
+    const byReel = await reelPools(); // each wheel spins through the names in its script column
     if (byReel.some((l) => l.length === 0)) {
       return Response.json({ error: "Every reel needs at least one active item" }, { status: 409 });
     }
-    // Spin script: row N decides the Nth spin since the last reset. A NULL reel (or an item that is no longer active) stays random.
+    // Spin script: row N decides the Nth spin since the last reset, starting again at row 1 after the last row. A NULL reel (or an item that is no longer active) stays random.
     const n = await nextSpinNumber();
     const [scripted] = await sql`SELECT reel1_item_id a, reel2_item_id b, reel3_item_id c FROM spin_script WHERE position = ${n} AND enabled`;
     const fixed: (Item | null)[] = [scripted?.a, scripted?.b, scripted?.c].map((id, k) => byReel[k].find((i) => i.id === id) ?? null);
@@ -42,7 +38,7 @@ export const POST = () =>
       const same = last && pick[0].id === last.a && pick[1].id === last.b && pick[2].id === last.c;
       if (!same || allFixed || combos === 1) break; // a scripted result is exactly what was asked for
     }
-    // Re-rolling can keep drawing the heavy item. If it still matches the last spin, force a different item on one free reel.
+    // If it still matches the last spin, force a different item on one free reel.
     const stillSame = last && pick[0].id === last.a && pick[1].id === last.b && pick[2].id === last.c;
     if (stillSame && !allFixed && combos > 1) {
       const k = [0, 1, 2].find((x) => !fixed[x] && byReel[x].length > 1);

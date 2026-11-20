@@ -1,9 +1,8 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "./api";
-import { isSection, SCRIPT_UI, SECTIONS, type DraftRow, type Item, type Section, type ScriptRow, type Stats } from "./types";
+import { isSection, SCRIPT_UI, SECTIONS, type Item, type Section, type ScriptRow, type Stats } from "./types";
 import { Banner, ConfirmProvider, IconGear, IconReels, IconScript, IconStats, ToastProvider, useToast } from "./ui";
-import Reels from "./Reels";
 import Script from "./Script";
 import StatsView from "./Stats";
 import Settings from "./Settings";
@@ -61,36 +60,23 @@ function Login({ configured, onDone }: { configured: boolean; onDone: () => void
   );
 }
 
-const toDraft = (rows: ScriptRow[], mk: () => string): DraftRow[] => rows.map((r) => ({ ...r, key: mk() }));
-const plain = (d: DraftRow[]) => JSON.stringify(d.map(({ reel1, reel2, reel3, enabled, note }) => ({ reel1, reel2, reel3, enabled, note })));
 
 function Shell({ onSignedOut }: { onSignedOut: () => void }) {
   const toast = useToast();
-  const [section, setSection] = useState<Section>("reels");
+  const [section, setSection] = useState<Section>("script");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<ApiError | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [saved, setSaved] = useState<ScriptRow[]>([]);
-  const [draft, setDraft] = useState<DraftRow[]>([]);
   const [nextSpin, setNextSpin] = useState(1);
   const [saving, setSaving] = useState(false);
-  const keyN = useRef(0);
-  const mkKey = useCallback(() => `r${++keyN.current}`, []);
-  const dirty = useMemo(() => plain(draft) !== JSON.stringify(saved), [draft, saved]);
-  const dirtyRef = useRef(false);
-  dirtyRef.current = dirty;
 
   useEffect(() => {
     const read = () => { const h = window.location.hash.slice(1); if (isSection(h)) setSection(h); };
     read();
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
-  }, []);
-  useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => { if (dirtyRef.current) e.preventDefault(); };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
   }, []);
 
   const load = useCallback(async (quiet = false) => {
@@ -106,7 +92,6 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
       setStats(st);
       setNextSpin(sc.nextSpin);
       setSaved(rows);
-      if (!dirtyRef.current) setDraft(toDraft(rows, mkKey));
       setError(null);
       setStatus("ready");
     } catch (e) {
@@ -114,19 +99,49 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
       setError(e instanceof ApiError ? e : new ApiError("Something went wrong.", 0));
       setStatus("error");
     }
-  }, [mkKey, onSignedOut]);
+  }, [onSignedOut]);
   useEffect(() => { void load(); }, [load]);
 
-  async function saveScript() {
+  // Keep "Next spin", the spin list and the stats in step with the kiosk: check every 3 s while this tab is
+  // visible, and straight away when you come back to it. Failed checks are ignored (the next one retries).
+  useEffect(() => {
+    let busy = false;
+    const tick = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        const [sc, st] = await Promise.all([
+          api<{ rows: (ScriptRow & { position: number })[]; nextSpin: number }>("/api/admin/script"),
+          api<Stats>("/api/admin/stats"),
+        ]);
+        setNextSpin(sc.nextSpin);
+        setSaved(sc.rows.map(({ reel1, reel2, reel3, enabled, note }) => ({ reel1, reel2, reel3, enabled, note })));
+        setStats(st);
+      } catch {
+        /* offline or signed out: the next check or the user's next action will show it */
+      } finally {
+        busy = false;
+      }
+    };
+    const id = window.setInterval(() => void tick(), 3000);
+    const onShow = () => { if (!document.hidden) void tick(); };
+    document.addEventListener("visibilitychange", onShow);
+    window.addEventListener("focus", onShow);
+    return () => { window.clearInterval(id); document.removeEventListener("visibilitychange", onShow); window.removeEventListener("focus", onShow); };
+  }, []);
+
+  /** Every change on the Spin script screen (add, edit, move, on/off, delete) saves the whole list straight away. */
+  async function saveRows(rows: ScriptRow[], done: string) {
     setSaving(true);
     try {
-      const rows = draft.map(({ reel1, reel2, reel3, enabled, note }) => ({ reel1, reel2, reel3, enabled, note }));
       await api("/api/admin/script", "PUT", { rows });
       setSaved(rows);
-      toast(`Script saved. ${rows.length} scripted ${rows.length === 1 ? "spin" : "spins"}.`);
+      toast(done);
       void load(true);
+      return true;
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "The script was not saved.", "err");
+      toast(e instanceof ApiError ? e.message : "That was not saved. Try again.", "err");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -153,7 +168,6 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
             return (
               <a key={s.id} href={`#${s.id}`} className="adm-link" aria-current={section === s.id ? "page" : undefined}>
                 <Ic /><span>{s.label}</span>
-                {SCRIPT_UI && s.id === "script" && dirty && <span className="adm-dot" title="Unsaved changes"><span className="sr-only">Unsaved changes</span></span>}
               </a>
             );
           })}
@@ -167,7 +181,7 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
             {loading ? <span className="chip-v">Loading…</span> : status === "error" ? <span className="chip-v">Unknown</span> : nextRow && nextRow.enabled ? (
               <span className="chip-v"><b>Spin #{nextSpin}</b> → {label(1, nextRow.reel1)} · {label(2, nextRow.reel2)} · {label(3, nextRow.reel3)}</span>
             ) : (
-              <span className="chip-v"><b>Random</b> <span className="chip-sub">Spin #{nextSpin} has no script row</span></span>
+              <span className="chip-v"><b>Random</b> <span className="chip-sub">No spin is ready to play. Add one, or fill in or switch on a spin.</span></span>
             )}
           </div> : <div className="top-title">Slot machine kiosk</div>}
           <div className="adm-actions">
@@ -180,10 +194,8 @@ function Shell({ onSignedOut }: { onSignedOut: () => void }) {
           <h1 className="adm-h1">{meta.label}</h1>
           <p className="lede">{meta.lede}</p>
           {status === "error" && error && <Banner message={error.message} onRetry={() => void load()} />}
-          {status !== "error" && section === "reels" && <Reels items={items} setItems={setItems} loading={loading} reload={() => void load(true)} />}
           {status !== "error" && section === "script" && (
-            <Script items={items} draft={draft} setDraft={setDraft} nextSpin={nextSpin} dirty={dirty} saving={saving} loading={loading}
-              onSave={() => void saveScript()} onDiscard={() => setDraft(toDraft(saved, mkKey))} mkKey={mkKey} />
+            <Script items={items} rows={saved} nextSpin={nextSpin} loading={loading} busy={saving} onSaveRows={saveRows} />
           )}
           {status !== "error" && section === "stats" && <StatsView stats={stats} loading={loading} />}
           {status !== "error" && section === "settings" && (

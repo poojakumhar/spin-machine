@@ -15,12 +15,12 @@ export type Stats = {
 export const REEL_KIND: Record<Reel, string> = { 1: "word", 2: "animal", 3: "word" };
 export type Section = "reels" | "script" | "stats" | "settings";
 /** The spin script screens are built but switched off for now. Set to true to bring the tab, the Next spin chip and the script stats back. */
-export const SCRIPT_UI = false;
+export const SCRIPT_UI = true;
 const ALL_SECTIONS: { id: Section; label: string; lede: string }[] = [
-  { id: "reels", label: "Reels", lede: "What can appear on each reel, how likely it is, and in what order." },
-  { id: "script", label: "Spin script", lede: "Decide the result of specific spins ahead of time. Anything left on Random is drawn as usual." },
+  { id: "reels", label: "Reels", lede: "What can appear on each reel, and in what order." },
+  { id: "script", label: "Spin script", lede: "Decide what each spin shows, in order. After the last spin it starts again from spin 1. Each wheel spins through the names in its column." },
   { id: "stats", label: "Stats & history", lede: "What the kiosk has produced so far." },
   { id: "settings", label: "Reset & settings", lede: "Clear the spin history and see how sign-in is set up." },
 ];
-export const SECTIONS = ALL_SECTIONS.filter((s) => SCRIPT_UI || s.id !== "script");
+export const SECTIONS = ALL_SECTIONS.filter((s) => s.id !== "reels" && (SCRIPT_UI || s.id !== "script"));
 export const isSection = (s: string): s is Section => SECTIONS.some((x) => x.id === s);

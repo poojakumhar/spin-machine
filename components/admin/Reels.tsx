@@ -1,43 +1,38 @@
 "use client";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { api, ApiError, formatBytes, imageProblem, uploadImage } from "./api";
+import { api, ApiError, imageProblem, uploadImage } from "./api";
 import { REEL_KIND, SCRIPT_UI, type Item, type Reel } from "./types";
-import { Empty, IconGrip, IconImage, IconPlus, IconTrash, ReelPreview, Skeleton, Switch, Thumb, useConfirm, useToast } from "./ui";
+import { IconDown, IconGrip, IconImage, IconPlus, IconTrash, IconUp, Skeleton, Switch, Thumb, useConfirm, useToast } from "./ui";
 
 type Props = { items: Item[]; setItems: Dispatch<SetStateAction<Item[]>>; loading: boolean; reload: () => void };
+type SaveBody = { label?: string; file?: File | null };
 const bySort = (a: Item, b: Item) => a.sort_order - b.sort_order || a.id - b.id;
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : "That did not work. Try again.");
+const reelName = (r: Reel) => `Reel ${r} – ${REEL_KIND[r]}`;
 
+/** All three reels side by side, one card each (the layout of the first admin). */
 export default function Reels({ items, setItems, loading, reload }: Props) {
-  const [reel, setReel] = useState<Reel>(1);
   const toast = useToast();
   const confirm = useConfirm();
   const [live, setLive] = useState("");
-  const [dragId, setDragId] = useState<number | null>(null);
-  const [overId, setOverId] = useState<number | null>(null);
-  const [armed, setArmed] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
-  const list = items.filter((i) => i.reel === reel).sort(bySort);
-  const label = (r: Reel) => `Reel ${r}, ${REEL_KIND[r]}`;
 
-  async function patch(it: Item, body: Partial<Item>, ok?: string) {
+  async function patch(it: Item, body: Partial<Item>) {
     setItems((p) => p.map((x) => (x.id === it.id ? { ...x, ...body } : x)));
     try {
       const { item } = await api<{ item: Item }>(`/api/admin/items/${it.id}`, "PATCH", body);
       setItems((p) => p.map((x) => (x.id === item.id ? item : x)));
-      if (ok) toast(ok);
     } catch (e) {
       setItems((p) => p.map((x) => (x.id === it.id ? it : x)));
       toast(errText(e), "err");
     }
   }
 
-  async function move(from: number, to: number) {
+  async function move(list: Item[], from: number, to: number) {
     if (to < 0 || to >= list.length || from === to) return;
     const next = [...list];
     const [m] = next.splice(from, 1);
     next.splice(to, 0, m);
-    setItems((p) => p.map((i) => (i.reel === reel ? { ...i, sort_order: next.findIndex((n) => n.id === i.id) } : i)));
+    setItems((p) => p.map((i) => (i.reel === m.reel ? { ...i, sort_order: next.findIndex((n) => n.id === i.id) } : i)));
     setLive(`${m.label} moved to position ${to + 1} of ${next.length}`);
     try {
       await api("/api/admin/reorder", "POST", { ids: next.map((n) => n.id) });
@@ -54,11 +49,10 @@ export default function Reels({ items, setItems, loading, reload }: Props) {
       confirmLabel: "Delete item",
       body: (
         <>
-          <p>This removes <strong>{it.label}</strong> from {label(it.reel)}, so it can no longer appear on the reel.</p>
+          <p>This removes <strong>{it.label}</strong> from {reelName(it.reel)}, so it can no longer appear on the reel.</p>
           <ul>
             <li>Past spins keep its name in the history.</li>
             {SCRIPT_UI && <li>Scripted spins that use it turn back to Random.</li>}
-            <li>The image file stays on disk.</li>
           </ul>
           <p>This cannot be undone. To keep it but stop it appearing, switch it off instead.</p>
         </>
@@ -76,8 +70,8 @@ export default function Reels({ items, setItems, loading, reload }: Props) {
     }
   }
 
-  /** Saves a name and/or new image together (the Save button on a row). Returns true when it worked. */
-  async function save(it: Item, { label, file }: { label?: string; file?: File | null }) {
+  /** The Save button on a row: name and/or new image together. Returns true when it worked. */
+  async function save(it: Item, { label, file }: SaveBody) {
     try {
       const body: Partial<Item> = {};
       if (label !== undefined) body.label = label;
@@ -92,74 +86,87 @@ export default function Reels({ items, setItems, loading, reload }: Props) {
     }
   }
 
-  const active = (r: Reel) => items.filter((i) => i.reel === r && i.active).length;
-  const total = (r: Reel) => items.filter((i) => i.reel === r).length;
+  async function add(reel: Reel, label: string) {
+    try {
+      const { item } = await api<{ item: Item }>("/api/admin/items", "POST", { reel, label });
+      setItems((p) => [...p, item]);
+      toast(`Added “${item.label}” to Reel ${reel}.`);
+      return true;
+    } catch (e) {
+      toast(errText(e), "err");
+      return false;
+    }
+  }
 
   return (
     <div className="rl-wrap">
-      <div className="tabs-bar">
-      <div className="tabs" role="tablist" aria-label="Reels">
+      <p className="rc-help">Switched-off items are never shown. Use ↑ ↓ to change the order. Decide what each spin shows in Spin script.</p>
+      <div className="rc-cols">
         {([1, 2, 3] as Reel[]).map((r) => (
-          <button key={r} type="button" role="tab" id={`tab-${r}`} aria-selected={reel === r} aria-controls="reel-panel" tabIndex={reel === r ? 0 : -1} className="tab" onClick={() => setReel(r)}
-            onKeyDown={(e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); const n = (((r - 1 + d + 3) % 3) + 1) as Reel; setReel(n); document.getElementById(`tab-${n}`)?.focus(); }}>
-            <span>Reel {r}</span>
-            <small>{REEL_KIND[r]}</small>
-            <span className="tab-count" aria-label={`${active(r)} of ${total(r)} items on`}>{loading ? "…" : `${active(r)}/${total(r)}`}</span>
-          </button>
+          <ReelCard key={r} reel={r} list={items.filter((i) => i.reel === r).sort(bySort)} loading={loading}
+            onMove={move} onPatch={patch} onRemove={remove} onSave={save} onAdd={add} />
         ))}
       </div>
-      <button type="button" className="btn btn-primary tabs-add" onClick={() => setAdding(true)} disabled={loading}><IconPlus /> Add to Reel {reel}</button>
-      </div>
-
-      <section id="reel-panel" role="tabpanel" aria-labelledby={`tab-${reel}`} className="panel">
-        <div className="panel-head">
-          <h2>{label(reel)}</h2>
-          <p>{reel === 2 ? "Each item is an animal picture with its name underneath." : "Each item is a word. An image under it is optional."} Switch an item off to keep it but stop it appearing.</p>
-        </div>
-
-        {loading ? (
-          <div className="rl-list" aria-busy="true">
-            <span className="sr-only" role="status">Loading items</span>
-            {[0, 1, 2, 3].map((k) => (
-              <div className="rl-row" key={k}><Skeleton h={44} w={44} /><Skeleton h={56} w={56} /><Skeleton h={56} w="100%" /><Skeleton h={44} w="100%" /></div>
-            ))}
-          </div>
-        ) : list.length === 0 ? (
-          <Empty title="No items yet. Add the first one.">Use the Add to Reel button at the top right. This reel cannot spin until it has at least one item that is switched on.</Empty>
-        ) : (
-          <ul className="rl-list" aria-label={`${label(reel)} items`}>
-            {list.map((it, idx) => (
-              <li
-                key={it.id}
-                className={`rl-row${it.active ? "" : " off"}${dragId === it.id ? " drag" : ""}${overId === it.id && dragId !== it.id ? " over" : ""}`}
-                draggable={armed === it.id}
-                onDragStart={(e) => { setDragId(it.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(it.id)); }}
-                onDragOver={(e) => { if (dragId !== null) { e.preventDefault(); setOverId(it.id); } }}
-                onDrop={(e) => { e.preventDefault(); const from = list.findIndex((x) => x.id === dragId); if (from >= 0) void move(from, idx); setDragId(null); setOverId(null); setArmed(null); }}
-                onDragEnd={() => { setDragId(null); setOverId(null); setArmed(null); }}
-              >
-                <button type="button" className="grip" aria-label={`Reorder ${it.label}. Drag, or use the up and down arrow keys.`}
-                  onPointerDown={() => setArmed(it.id)} onPointerUp={() => setArmed(null)}
-                  onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); void move(idx, idx - 1); } if (e.key === "ArrowDown") { e.preventDefault(); void move(idx, idx + 1); } }}>
-                  <IconGrip />
-                </button>
-                <ItemEditor it={it} onSave={(body) => save(it, body)} />
-                <Switch checked={it.active} label={`${it.label} is ${it.active ? "on" : "off"}`} onChange={(v) => void patch(it, { active: v })} />
-                <button type="button" className="iconbtn danger" aria-label={`Delete ${it.label}`} onClick={() => void remove(it)}><IconTrash /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="sr-only" aria-live="polite">{live}</p>
-
-        <AddDialog open={adding} reel={reel} onClose={() => setAdding(false)} onAdded={(it) => setItems((p) => [...p, it])} />
-      </section>
+      <p className="sr-only" aria-live="polite">{live}</p>
     </div>
   );
 }
 
-/** Name and image of one item. Changes stay here as a draft until Save; Cancel puts the saved ones back. */
-function ItemEditor({ it, onSave }: { it: Item; onSave: (b: { label?: string; file?: File | null }) => Promise<boolean> }) {
+type CardProps = {
+  reel: Reel; list: Item[]; loading: boolean;
+  onMove: (list: Item[], from: number, to: number) => Promise<void>;
+  onPatch: (it: Item, body: Partial<Item>) => Promise<void>;
+  onRemove: (it: Item) => Promise<void>;
+  onSave: (it: Item, b: SaveBody) => Promise<boolean>;
+  onAdd: (reel: Reel, label: string) => Promise<boolean>;
+};
+
+function ReelCard({ reel, list, loading, onMove, onPatch, onRemove, onSave, onAdd }: CardProps) {
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [overId, setOverId] = useState<number | null>(null);
+  const [armed, setArmed] = useState<number | null>(null);
+  return (
+    <section className="rc-card" aria-labelledby={`rc-${reel}`}>
+      <h2 id={`rc-${reel}`}>{reelName(reel)}</h2>
+      {loading ? (
+        <div className="rl-list" aria-busy="true">
+          {[0, 1, 2].map((k) => <div className="rl-row rc-skel" key={k}><Skeleton h={44} w="100%" /></div>)}
+        </div>
+      ) : list.length === 0 ? (
+        <p className="rc-empty">No items yet. Add the first one below. This reel cannot spin until it has an item that is switched on.</p>
+      ) : (
+        <ul className="rl-list" aria-label={`${reelName(reel)} items`}>
+          {list.map((it, idx) => (
+            <li key={it.id}
+              className={`rl-row${it.active ? "" : " off"}${dragId === it.id ? " drag" : ""}${overId === it.id && dragId !== it.id ? " over" : ""}`}
+              draggable={armed === it.id}
+              onDragStart={(e) => { setDragId(it.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(it.id)); }}
+              onDragOver={(e) => { if (dragId !== null) { e.preventDefault(); setOverId(it.id); } }}
+              onDrop={(e) => { e.preventDefault(); const from = list.findIndex((x) => x.id === dragId); if (from >= 0) void onMove(list, from, idx); setDragId(null); setOverId(null); setArmed(null); }}
+              onDragEnd={() => { setDragId(null); setOverId(null); setArmed(null); }}>
+              <button type="button" className="grip" aria-label={`Drag to reorder ${it.label}`} tabIndex={-1}
+                onPointerDown={() => setArmed(it.id)} onPointerUp={() => setArmed(null)}><IconGrip /></button>
+              <Row it={it} first={idx === 0} last={idx === list.length - 1}
+                onUp={() => void onMove(list, idx, idx - 1)} onDown={() => void onMove(list, idx, idx + 1)}
+                onActive={(v) => void onPatch(it, { active: v })} onRemove={() => void onRemove(it)}
+                onSave={(b) => onSave(it, b)} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <AddForm reel={reel} disabled={loading} onAdd={onAdd} />
+    </section>
+  );
+}
+
+type RowProps = {
+  it: Item; first: boolean; last: boolean;
+  onUp: () => void; onDown: () => void; onActive: (v: boolean) => void; onRemove: () => void;
+  onSave: (b: SaveBody) => Promise<boolean>;
+};
+
+/** Name and image of one item. Changes stay a draft until Save; Cancel puts the saved ones back. */
+function Row({ it, first, last, onUp, onDown, onActive, onRemove, onSave }: RowProps) {
   const toast = useToast();
   const ref = useRef<HTMLInputElement>(null);
   const [v, setV] = useState(it.label);
@@ -176,7 +183,6 @@ function ItemEditor({ it, onSave }: { it: Item; onSave: (b: { label?: string; fi
   }, [file]);
   const t = v.trim();
   const dirty = t !== it.label || !!file;
-  const image = preview ?? it.image_url;
   const pick = (f: File | undefined) => {
     if (!f) return;
     const p = imageProblem(f);
@@ -192,20 +198,26 @@ function ItemEditor({ it, onSave }: { it: Item; onSave: (b: { label?: string; fi
     setBusy(false);
     if (ok) setFile(null);
   };
+  const keys = (e: React.KeyboardEvent) => { if (e.key === "Enter" && dirty) void save(); if (e.key === "Escape") cancel(); };
   return (
     <>
       <button type="button" className={`thumb-btn${file ? " changed" : ""}`} aria-label={`${it.image_url ? "Change" : "Add"} image for ${it.label}`} onClick={() => ref.current?.click()} disabled={busy}>
-        <Thumb src={image} />
+        <Thumb src={preview ?? it.image_url} size={44} />
       </button>
       <input ref={ref} type="file" hidden accept="image/png,image/webp,image/svg+xml" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-      <ReelPreview reel={it.reel} label={t} image={image} dim={!it.active} />
-      <div className="lf">
-        <input className="inp" aria-label={`Label for ${it.label}`} aria-invalid={!!err} aria-describedby={err ? `e-${it.id}` : undefined} maxLength={60} value={v} disabled={busy}
-          onChange={(e) => { setV(e.target.value); if (err) setErr(""); }}
-          onKeyDown={(e) => { if (e.key === "Enter" && dirty) void save(); if (e.key === "Escape") cancel(); }} />
-        {err && <span className="field-err" id={`e-${it.id}`} role="alert">{err}</span>}
-        <div className="lf-actions">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => ref.current?.click()} disabled={busy}><IconImage /> {it.image_url || file ? "Change image" : "Add image"}</button>
+      <input className="inp rc-label" aria-label={`Label for ${it.label}`} aria-invalid={!!err} maxLength={60} value={v} disabled={busy}
+        onChange={(e) => { setV(e.target.value); if (err) setErr(""); }} onKeyDown={keys} />
+      <div className="rc-tools">
+        <button type="button" className="iconbtn" aria-label={`Move ${it.label} up`} title="Move up" onClick={onUp} disabled={first || busy}><IconUp /></button>
+        <button type="button" className="iconbtn" aria-label={`Move ${it.label} down`} title="Move down" onClick={onDown} disabled={last || busy}><IconDown /></button>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => ref.current?.click()} disabled={busy}><IconImage /> {it.image_url || file ? "Change image" : "Add image"}</button>
+        <span className="rc-gap" />
+        <Switch checked={it.active} label={`${it.label} is ${it.active ? "on" : "off"}`} onChange={onActive} />
+        <button type="button" className="iconbtn danger" aria-label={`Delete ${it.label}`} title="Delete" onClick={onRemove}><IconTrash /></button>
+      </div>
+      {(dirty || err) && (
+        <div className="rc-save">
+          {err && <span className="field-err" role="alert">{err}</span>}
           {dirty && (
             <>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => void save()} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
@@ -214,115 +226,25 @@ function ItemEditor({ it, onSave }: { it: Item; onSave: (b: { label?: string; fi
             </>
           )}
         </div>
-      </div>
+      )}
     </>
   );
 }
 
-function AddDialog({ open, reel, onClose, onAdded }: { open: boolean; reel: Reel; onClose: () => void; onAdded: (it: Item) => void }) {
-  const toast = useToast();
-  const dlg = useRef<HTMLDialogElement>(null);
+function AddForm({ reel, disabled, onAdd }: { reel: Reel; disabled: boolean; onAdd: (reel: Reel, label: string) => Promise<boolean> }) {
   const [label, setLabel] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [errs, setErrs] = useState<{ label?: string; file?: string; form?: string }>({});
   const [busy, setBusy] = useState(false);
-  const [hot, setHot] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  const labelRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const d = dlg.current;
-    if (!d) return;
-    if (open && !d.open) {
-      setLabel(""); setFile(null); setErrs({});
-      d.showModal();
-      setTimeout(() => labelRef.current?.focus(), 0);
-    } else if (!open && d.open) d.close();
-  }, [open]);
-  useEffect(() => {
-    if (!file) return setPreview(null);
-    const u = URL.createObjectURL(file);
-    setPreview(u);
-    return () => URL.revokeObjectURL(u);
-  }, [file]);
-
-  const take = (f: File | undefined) => {
-    if (!f) return;
-    const p = imageProblem(f);
-    if (p) { setFile(null); setErrs((e) => ({ ...e, file: p })); return; }
-    setErrs((e) => ({ ...e, file: undefined }));
-    setFile(f);
-  };
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const t = label.trim();
-    if (!t) return setErrs((x) => ({ ...x, label: "Enter a label for the new item." }));
-    if (errs.file) return;
-    setBusy(true);
-    setErrs({});
-    try {
-      const image_url = file ? await uploadImage(file) : null;
-      const { item } = await api<{ item: Item }>("/api/admin/items", "POST", { reel, label: t, image_url });
-      onAdded(item);
-      toast(`Added “${item.label}” to Reel ${reel}.`);
-      onClose();
-    } catch (er) {
-      setErrs({ form: errText(er) });
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <dialog ref={dlg} className="cf cf-wide" aria-labelledby="add-title"
-      onCancel={(e) => { e.preventDefault(); if (!busy) onClose(); }}
-      onClick={(e) => { if (e.target === dlg.current && !busy) onClose(); }}>
-      <form className="cf-body" onSubmit={submit} noValidate>
-        <h2 id="add-title">Add an item to Reel {reel}</h2>
-        <div className="add-grid">
-          <div className="field">
-            <label htmlFor="add-label">Label</label>
-            <input id="add-label" ref={labelRef} className="inp" maxLength={60} value={label} disabled={busy} aria-invalid={!!errs.label} aria-describedby={errs.label ? "add-label-err" : undefined}
-              onChange={(e) => { setLabel(e.target.value); if (errs.label) setErrs((x) => ({ ...x, label: undefined })); }} placeholder={reel === 2 ? "For example, Camel" : "For example, Parigrah"} />
-            {errs.label && <span className="field-err" id="add-label-err" role="alert">{errs.label}</span>}
-          </div>
-          <div className="field">
-            <span className="lbl" id="add-img-l">Image{reel === 2 ? "" : " (optional)"}</span>
-            <div className={`drop${hot ? " hot" : ""}${errs.file ? " bad" : ""}`} aria-describedby={errs.file ? "add-file-err" : undefined}
-              onClick={(e) => { if (e.target === e.currentTarget) input.current?.click(); }}
-              onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
-              onDrop={(e) => { e.preventDefault(); setHot(false); take(e.dataTransfer.files?.[0]); }}>
-              {file && preview ? (
-                <>
-                  <Thumb src={preview} size={64} />
-                  <span className="drop-text"><strong>{file.name}</strong><small>{file.type.replace("image/", "").toUpperCase()}, {formatBytes(file.size)}</small></span>
-                  <button type="button" className="btn btn-secondary" onClick={() => input.current?.click()}>Change</button>
-                  <button type="button" className="btn btn-quiet" onClick={() => setFile(null)}>Remove</button>
-                </>
-              ) : (
-                <>
-                  <IconImage />
-                  <span className="drop-text"><strong>Drop an image here</strong><small>PNG, WebP or SVG, up to 4 MB. Transparent backgrounds work best.</small></span>
-                  <button type="button" className="btn btn-secondary" aria-describedby="add-img-l" onClick={() => input.current?.click()}>Choose image</button>
-                </>
-              )}
-            </div>
-            <input ref={input} type="file" hidden accept="image/png,image/webp,image/svg+xml" onChange={(e) => { take(e.target.files?.[0]); e.target.value = ""; }} />
-            {errs.file && <span className="field-err" id="add-file-err" role="alert">{errs.file}</span>}
-          </div>
-          <div className="field">
-            <span className="lbl">As it will appear</span>
-            <ReelPreview reel={reel} label={label.trim()} image={preview} />
-          </div>
-        </div>
-        {errs.form && <p className="field-err" role="alert">{errs.form}</p>}
-        <div className="cf-actions">
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={busy}><IconPlus /> {busy ? "Adding…" : `Add to Reel ${reel}`}</button>
-        </div>
-      </form>
-    </dialog>
+    <form className="rc-add" onSubmit={async (e) => {
+      e.preventDefault();
+      const t = label.trim();
+      if (!t) return;
+      setBusy(true);
+      if (await onAdd(reel, t)) setLabel("");
+      setBusy(false);
+    }}>
+      <input className="inp" placeholder="New label" aria-label={`New label for Reel ${reel}`} maxLength={60} value={label} disabled={disabled || busy} onChange={(e) => setLabel(e.target.value)} />
+      <button type="submit" className="btn btn-primary" disabled={disabled || busy || !label.trim()}><IconPlus /> {busy ? "Adding…" : "Add"}</button>
+    </form>
   );
 }

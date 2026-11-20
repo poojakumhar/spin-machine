@@ -1,11 +1,12 @@
-import { sql, assertDb, type Item } from "@/lib/db";
+import { assertDb } from "@/lib/db";
+import { reelPools } from "@/lib/pools";
 import { guard } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
-// Public: active items, used only to preload images.
+// Public: the names each wheel spins through (see reelPools), used to preload images and show the idle reels.
 export const GET = () =>
   guard(async () => {
     assertDb();
-    const items = (await sql`SELECT id, reel, label, image_url FROM reel_items WHERE active ORDER BY reel, sort_order, id`) as unknown as Item[];
+    const items = (await reelPools()).flat().map(({ id, reel, label, image_url }) => ({ id, reel, label, image_url }));
     return Response.json({ items });
   });
