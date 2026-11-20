@@ -67,7 +67,7 @@ if (mode === "diag") {
     await p.close();
     const q = await open(w, h);
     await q.keyboard.press("Space");
-    await q.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+    await q.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
     await q.waitForTimeout(500);
     await q.addStyleTag({ content: ".confetti{display:none !important}" });
     await q.waitForTimeout(100);

@@ -163,7 +163,7 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced]);
 
-  const label = phase === "spinning" ? "SPINNING" : phase === "result" ? "PULL AGAIN" : phase === "error" ? "TRY AGAIN" : attract ? "PRESS TO BEGIN" : "PULL";
+  const label = phase === "spinning" ? "SPINNING" : phase === "result" ? "SPIN AGAIN" : phase === "error" ? "TRY AGAIN" : attract ? "PRESS TO BEGIN" : "SPIN";
   const glow = phase === "result";
 
   return (

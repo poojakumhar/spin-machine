@@ -13,7 +13,7 @@ for (const [w, h] of [[1920, 1080], [1280, 720]]) {
   await p.screenshot({ path: `shots/final-${w}-idle.png` });
   await p.keyboard.press("Space"); await p.waitForTimeout(1200);
   await p.screenshot({ path: `shots/final-${w}-spin.png` });
-  await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+  await p.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
   await p.waitForTimeout(1800);
   await p.screenshot({ path: `shots/final-${w}-result.png` });
   await p.close();

@@ -6,7 +6,7 @@ const ok = (n, c, d = "") => console.log(`${c ? "PASS" : "FAIL"}  ${n}${d ? "  (
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
 await p.goto(URL);
-await p.waitForFunction(() => document.querySelector(".pull span")?.textContent === "PULL", null, { timeout: 20000 });
+await p.waitForFunction(() => document.querySelector(".pull span")?.textContent === "SPIN", null, { timeout: 20000 });
 await p.waitForTimeout(1000);
 await p.evaluate(() => {
   const holes = () => [...document.querySelectorAll(".machine .hole")].filter((h) => !h.classList.contains("hole-scene"));

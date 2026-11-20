@@ -5,7 +5,7 @@ await p.goto("http://localhost:3100/test2"); await p.waitForSelector(".pull span
 await p.screenshot({ path: "shots/t2-idle.png" });
 await p.keyboard.press("Space"); await p.waitForTimeout(700); await p.screenshot({ path: "shots/t2-spin1.png" });
 await p.waitForTimeout(1300); await p.screenshot({ path: "shots/t2-spin2.png" });
-await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+await p.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
 await p.addStyleTag({ content: ".confetti{display:none!important}" }); await p.waitForTimeout(400);
 await p.screenshot({ path: "shots/t2-result.png" });
 console.log("errors:", errs.join(" ; ") || "none");

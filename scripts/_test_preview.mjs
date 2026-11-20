@@ -16,7 +16,7 @@ for (const [name, vp, mobile] of [["phone", { width: 844, height: 390 }, true], 
   await p.waitForTimeout(300);
   if (mobile) await p.tap(".pull", { force: true }); else await p.click(".pull", { force: true });
   await p.waitForTimeout(1200); await p.screenshot({ path: `C:/Users/DesignTeam/slot-machine/shots/preview-${name}-spin.png` });
-  await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+  await p.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
   await p.addStyleTag({ content: ".confetti{display:none!important}" }); await p.waitForTimeout(500);
   await p.screenshot({ path: `C:/Users/DesignTeam/slot-machine/shots/preview-${name}-result.png` });
   const labels = await p.evaluate(() => [...document.querySelectorAll(".machine .hole:not(.hole-scene)")].map((h) => [...h.children].sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0].querySelector(".word,.name").innerText));

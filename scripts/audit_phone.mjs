@@ -15,7 +15,7 @@ for (const [name, dev] of [["iphone", devices["iPhone 13"]], ["android", devices
     p.on("requestfailed", (r) => errs.push("failed: " + r.url()));
     const t0 = Date.now();
     await p.goto(URL, { waitUntil: "load" });
-    const ready = await p.waitForFunction(() => /PULL|PRESS/.test(document.querySelector(".pull span")?.textContent ?? ""), null, { timeout: 20000 }).then(() => true, () => false);
+    const ready = await p.waitForFunction(() => /SPIN|PRESS/.test(document.querySelector(".pull span")?.textContent ?? ""), null, { timeout: 20000 }).then(() => true, () => false);
     const info = await p.evaluate(() => {
       const btn = document.querySelector(".pull")?.getBoundingClientRect();
       const label = document.querySelector(".pull span")?.textContent;

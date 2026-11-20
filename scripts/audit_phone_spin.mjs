@@ -22,7 +22,7 @@ for (const [name, dev] of [["iphone", devices["iPhone 13"]], ["android", devices
     HTMLMediaElement.prototype.pause = function () { window.__clips.push({ ev: "media-pause", at: performance.now() }); return op.call(this); };
   });
   await p.goto(URL);
-  await p.waitForFunction(() => document.querySelector(".pull span")?.textContent === "PULL", null, { timeout: 20000 });
+  await p.waitForFunction(() => document.querySelector(".pull span")?.textContent === "SPIN", null, { timeout: 20000 });
   await p.tap(".sound", { force: true }); await p.waitForTimeout(300);
   await p.evaluate(() => {
     const holes = () => [...document.querySelectorAll(".machine .hole")].filter((h) => !h.classList.contains("hole-scene"));
@@ -42,7 +42,7 @@ for (const [name, dev] of [["iphone", devices["iPhone 13"]], ["android", devices
   });
   const t0 = await p.evaluate(() => performance.now());
   await p.tap(".pull", { force: true });
-  await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 20000 });
+  await p.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 20000 });
   await p.waitForTimeout(800);
   const r = await p.evaluate(() => ({ stops: window.__stops, clips: window.__clips }));
   const s = (t) => ((t - t0) / 1000).toFixed(2) + "s";

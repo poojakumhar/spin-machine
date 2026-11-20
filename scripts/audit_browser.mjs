@@ -68,7 +68,7 @@ for (const [w, h] of [[1920, 1080], [1280, 720], [3840, 2160], [1440, 900], [900
 {
   const { page, ctx } = await open(browser, 1920, 1080);
   const label = () => page.locator(".pull span").innerText();
-  check("idle label is PULL", (await label()) === "PULL", await label());
+  check("idle label is PULL", (await label()) === "SPIN", await label());
   spinCalls = 0;
   await page.keyboard.press("Space");
   await page.waitForTimeout(150);
@@ -86,9 +86,9 @@ for (const [w, h] of [[1920, 1080], [1280, 720], [3840, 2160], [1440, 900], [900
   check("reels animate while spinning", blur);
   // staggered stops: reel 1 finishes before reel 3
   const t0 = Date.now(); const stops = {};
-  await page.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
   stops.total = Date.now() - t0;
-  check("result state reached (label PULL AGAIN)", true, `${stops.total}ms after spin phase`);
+  check("result state reached (label SPIN AGAIN)", true, `${stops.total}ms after spin phase`);
   await page.waitForTimeout(400);
   const texts = await page.evaluate(() => [...document.querySelectorAll(".hole")].map((h) => h.innerText.trim()));
   check("result shows server-chosen combination", texts.some((t) => /TIRYANCH/i.test(t)) && texts.some((t) => /Bullock|Dog|Horse|Elephant/i.test(t)) && texts.some((t) => /PARADHINTA/i.test(t)), texts.join(" / "));
@@ -135,7 +135,7 @@ for (const [w, h] of [[1920, 1080], [1280, 720], [3840, 2160], [1440, 900], [900
   await page.waitForTimeout(500);
   const anim = await page.evaluate(() => [...document.querySelectorAll(".strip")].some((s) => s.getAnimations().some((a) => a.effect?.getKeyframes?.().some((k) => k.transform))));
   check("reduced motion: reels do not spin", !anim);
-  await page.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 8000 });
+  await page.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 8000 });
   check("reduced motion: still reaches the result", true);
   await ctx.close();
 }

@@ -36,7 +36,7 @@ await p.goto(URL); await p.waitForSelector(".pull span:not(:has-text('…'))"); 
 
 // 1. sound is off by default: a spin must be silent
 await p.keyboard.press("Space");
-await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+await p.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
 const silent = await p.evaluate(() => window.__tones.length + window.__clips.length);
 await p.waitForTimeout(9500);   // let the result time out back to idle
 
@@ -61,7 +61,7 @@ await p.evaluate(() => {
 });
 const pressAt = await p.evaluate(() => performance.now());
 await p.keyboard.press("Space");
-await p.waitForFunction(() => document.querySelector(".pull span").textContent === "PULL AGAIN", null, { timeout: 15000 });
+await p.waitForFunction(() => document.querySelector(".pull span").textContent === "SPIN AGAIN", null, { timeout: 15000 });
 await p.waitForTimeout(1500);
 const r = await p.evaluate(() => ({ tones: window.__tones, clips: window.__clips, stops: window.__lastChange }));
 const ms = (t) => Math.round(t - pressAt);
