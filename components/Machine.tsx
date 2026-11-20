@@ -38,7 +38,6 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
   const resultAt = useRef(0);
   const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const soundRef = useRef(false);
-  const attractIdx = useRef(0);
   const demo = useRef(typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo"));
 
   const setP = (p: Phase) => { phaseRef.current = p; setPhase(p); };
@@ -154,17 +153,11 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
     };
   }, [press]);
 
-  // Attract mode: after 20s idle, gently roll each reel to the next item every few seconds.
+  // Attract mode: after 20s idle the button reads "PRESS TO BEGIN". The reels stay still: they only turn on a pull.
   useEffect(() => {
     const t = setInterval(() => {
       const idle = phaseRef.current === "idle" && Date.now() - lastInput.current > ATTRACT_AFTER;
       setAttract(idle);
-      if (!idle || reduced) return;
-      attractIdx.current++;
-      reels.forEach((r, i) => {
-        const l = items.current[i];
-        if (l.length) setTimeout(() => phaseRef.current === "idle" && r.current?.spin([], l[attractIdx.current % l.length], 900), i * 180);
-      });
     }, 3600);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
