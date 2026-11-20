@@ -64,6 +64,13 @@ function BoxCell({ kind, cell, h }: { kind: "word" | "scene" | "animal"; cell: C
 const SEG = Math.PI / 4;                 // angle between neighbouring items
 const VISIBLE = Math.PI / 2 - 0.05;      // beyond this an item is behind the drum
 const ease = (t: number) => { const c1 = 0.15, c3 = c1 + 1; return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2; };  // ease-out, small settle
+const EASE_V0 = 3 * 1.15 - 2 * 0.15; // ease'(0): starting speed of the slow-down, so it joins the steady part smoothly
+const DECEL_MS = 2500;               // the reel slows down only during its last 2.5 s
+/** Share of the turn done after `e` ms of an `ms`-long spin: steady speed, then the ease-out slow-down at the end. */
+const travel = (e: number, ms: number) => {
+  const d = Math.min(DECEL_MS, ms * 0.6), cruise = ms - d, v = 1 / (cruise + d / EASE_V0);
+  return e < cruise ? v * e : v * cruise + (1 - v * cruise) * ease(Math.min(1, (e - cruise) / d));
+};
 
 export const Reel = forwardRef<ReelHandle, { reel: 1 | 2 | 3; initial: Cell | null; reduced: boolean; pool?: Cell[] }>(function Reel({ reel, initial, reduced, pool = [] }, ref) {
   const { BOXES, WINDOWS, K } = useGeo();
@@ -135,8 +142,8 @@ export const Reel = forwardRef<ReelHandle, { reel: 1 | 2 | 3; initial: Cell | nu
       spinToken.current++;
       const before = around(from), after = around(target);
       // A real drum shows its items in a fixed order: turn through the reel's own list, ending on the result.
-      // Longer spins pass more items (about 9 per second, at least 12), so a 5 s spin still starts fast.
-      const minSteps = Math.max(12, Math.round(ms / 110));
+      // Steady fast turn (about 16 items a second) for most of the spin, then a 2.5 s slow-down, so a long spin keeps moving.
+      const minSteps = Math.max(12, Math.round(ms / 75));
       const p = poolRef.current;
       const fi = p.findIndex((x) => x.id === from.id), ti = p.findIndex((x) => x.id === target.id);
       let list: Cell[];
@@ -157,8 +164,8 @@ export const Reel = forwardRef<ReelHandle, { reel: 1 | 2 | 3; initial: Cell | nu
       const t0 = performance.now();
       await new Promise<void>((resolve) => {
         const step = (now: number) => {
-          const t = Math.min(1, (now - t0) / ms);
-          angle.current = start + (end - start) * ease(t);
+          const e = now - t0, t = Math.min(1, e / ms);
+          angle.current = start + (end - start) * travel(Math.min(e, ms), ms);
           draw();
           if (t < 1) raf.current = requestAnimationFrame(step);
           else resolve();
