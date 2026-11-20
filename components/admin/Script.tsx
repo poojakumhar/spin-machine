@@ -55,7 +55,7 @@ export default function Script({ items, rows, nextSpin, loading, busy, onSaveRow
   };
   const confirm = useConfirm();
   const del = async (i: number) => {
-    const names = [rows[i].reel1, rows[i].reel2, rows[i].reel3].map((id) => item(id)?.label ?? "Missing").join(" · ");
+    const names = [rows[i].reel1, rows[i].reel2, rows[i].reel3].map((id) => item(id)?.label ?? "").join(" · ");
     const ok = await confirm({
       title: `Delete spin ${i + 1}?`,
       danger: true,
@@ -99,20 +99,18 @@ export default function Script({ items, rows, nextSpin, loading, busy, onSaveRow
             const n = i + 1;
             const isNext = n === nextSpin;
             const ids = [r.reel1, r.reel2, r.reel3];
-            const missing = ids.some((id) => item(id) === undefined);
             return (
-              <li key={`${i}-${ids.join("-")}`} className={`sc-row${isNext ? " next" : ""}${!r.enabled ? " off" : ""}${missing ? " missing" : ""}`} aria-current={isNext ? "step" : undefined}>
+              <li key={`${i}-${ids.join("-")}`} className={`sc-row${isNext ? " next" : ""}${!r.enabled ? " off" : ""}`} aria-current={isNext ? "step" : undefined}>
                 <div className="sc-num">
                   <strong>Spin {n}</strong>
                   {isNext && <span className="badge">Next</span>}
-                  {missing && <span className="sc-missing">Names missing, press Edit</span>}
                 </div>
                 {ids.map((id, k) => {
                   const it = item(id);
                   return (
-                    <div key={k} className={`sc-cell${it ? "" : " noname"}`}>
+                    <div key={k} className="sc-cell">
                       {it?.image_url ? <Thumb src={it.image_url} size={36} /> : null}
-                      <span className="sel-label"><span className="sr-only">Reel {k + 1}: </span>{it?.label ?? "Missing"}</span>
+                      <span className="sel-label"><span className="sr-only">Reel {k + 1}: </span>{it?.label ?? ""}</span>
                     </div>
                   );
                 })}
