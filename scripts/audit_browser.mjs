@@ -93,7 +93,7 @@ for (const [w, h] of [[1920, 1080], [1280, 720], [3840, 2160], [1440, 900], [900
   const texts = await page.evaluate(() => [...document.querySelectorAll(".hole")].map((h) => h.innerText.trim()));
   check("result shows server-chosen combination", texts.some((t) => /TIRYANCH/i.test(t)) && texts.some((t) => /Bullock|Dog|Horse|Elephant/i.test(t)) && texts.some((t) => /PARADHINTA/i.test(t)), texts.join(" / "));
   await page.screenshot({ path: "shots/audit-1920-result.png" });
-  check("confetti present at result", (await page.locator(".confetti i").count()) > 0);
+  check("no confetti at result", (await page.locator(".confetti").count()) === 0);
   // lock window then accepted
   await page.keyboard.press("Space"); await page.waitForTimeout(200);
   check("press right after result lands is locked", spinCalls === 1, `calls=${spinCalls}`);

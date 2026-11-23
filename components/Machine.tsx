@@ -25,7 +25,6 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
   const [attract, setAttract] = useState(false);
   const [sound, setSound] = useState(false);
   const [cursorHidden, setCursorHidden] = useState(false);
-  const [confetti, setConfetti] = useState(0);
   const [initial, setInitial] = useState<(Cell | null)[]>([null, null, null]);
   const [pools, setPools] = useState<Cell[][]>([[], [], []]);
   const [reduced, setReduced] = useState(false);
@@ -93,7 +92,6 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
     lastPress.current = now;
     clearTimeout(resetTimer.current);
     setAttract(false);
-    setConfetti(0);
     setP("spinning");
     let res: SpinRes;
     try {
@@ -117,9 +115,8 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
     );
     resultAt.current = Date.now();
     setP("result");
-    setConfetti(res.spinId);
     if (soundRef.current) { sfx.end(); sfx.win(); }   // spin loop stops when the result shows
-    resetTimer.current = setTimeout(() => { setConfetti(0); setP("idle"); lastInput.current = Date.now(); }, RESULT_MS);
+    resetTimer.current = setTimeout(() => { setP("idle"); lastInput.current = Date.now(); }, RESULT_MS);
   }, [reduced]);
 
   // Input: Space/Enter (also arcade/USB buttons), F = fullscreen, pointer activity.
@@ -205,13 +202,6 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
           </svg>
         </button>
 
-        {confetti > 0 && (
-          <div className="confetti" key={confetti} aria-hidden>
-            {Array.from({ length: 30 }, (_, i) => (
-              <i key={i} style={{ left: `${(i * 97) % 100}%`, animationDelay: `${(i % 11) * 0.09}s`, animationDuration: `${3.2 + (i % 5) * 0.5}s`, background: i % 3 ? "#e8b02e" : i % 3 === 0 && i % 2 ? "#b3202c" : "#fff1b0", transform: `rotate(${i * 37}deg)` }} />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
