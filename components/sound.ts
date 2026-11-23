@@ -104,5 +104,4 @@ export const sfx = {
   /** All reels have stopped (or the spin was cancelled). */
   end: spinStop,
   stop: () => { tone(140, 0.14, "square", 0.08, 0, 60); tone(900, 0.06, "triangle", 0.05); },
-  win: () => [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.5, "triangle", 0.07, i * 0.11)),
 };

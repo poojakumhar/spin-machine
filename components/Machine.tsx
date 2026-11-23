@@ -115,7 +115,7 @@ export default function Machine({ geo = GEO1 }: { geo?: Geo } = {}) {
     );
     resultAt.current = Date.now();
     setP("result");
-    if (soundRef.current) { sfx.end(); sfx.win(); }   // spin loop stops when the result shows
+    if (soundRef.current) sfx.end();   // spin sound stops when the result shows (no result sound)
     resetTimer.current = setTimeout(() => { setP("idle"); lastInput.current = Date.now(); }, RESULT_MS);
   }, [reduced]);
 
