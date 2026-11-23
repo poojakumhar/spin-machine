@@ -64,7 +64,7 @@ body { color: #2a1a08; }
   animation: pulse 2.8s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 .pull span {
-  font-family: var(--font-display); font-size: 50px; letter-spacing: .06em; color: var(--red);
+  font-family: var(--font-word), system-ui, sans-serif; font-weight: 600; font-size: 50px; letter-spacing: .06em; color: var(--red);
   text-shadow: 0 2px 0 rgba(255, 244, 190, .9), 0 -1px 0 rgba(70, 10, 0, .5), 0 5px 6px rgba(90, 40, 0, .35);
 }
 .pull:active { transform: translateY(10px); box-shadow: 0 0 0 4px #8a4a06, 0 0 0 8px #ffd96a, 0 0 0 11px #a95002, 0 4px 0 11px #7a3d03, 0 10px 14px rgba(60, 25, 0, .4), inset 0 4px 6px rgba(255, 255, 255, .5), inset 0 -8px 14px rgba(110, 50, 0, .45); }
